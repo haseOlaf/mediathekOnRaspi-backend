@@ -17,15 +17,15 @@ public class VideoResource {
     @Autowired
     VideoService videoService;
 
-    @RequestMapping("start")
-    public String start() {
+    @RequestMapping("connect")
+    public String connect() {
         videoService.connect();
         return "start";
     }
 
-    @RequestMapping("quit")
-    public void quit() {
-        videoService.quit();
+    @RequestMapping("stop")
+    public void stop() {
+        videoService.stop();
     }
 
     @RequestMapping("pause")
@@ -33,8 +33,20 @@ public class VideoResource {
         videoService.pause();
     }
 
-    @RequestMapping("exit")
-    public void exit() {
+    @RequestMapping("forward")
+    public void forward() { videoService.forward(); }
+
+    @RequestMapping("rewind")
+    public void rewind() { videoService.rewind(); }
+
+    @RequestMapping("fastforward")
+    public void fastForward() { videoService.fastForward(); }
+
+    @RequestMapping("fastrewind")
+    public void fastRewind() { videoService.fastRewind(); }
+
+    @RequestMapping("disconnect")
+    public void disconnect() {
         videoService.disconnect();
     }
 

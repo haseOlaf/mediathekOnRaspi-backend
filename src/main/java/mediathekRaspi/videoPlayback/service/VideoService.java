@@ -7,9 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,7 +64,7 @@ public class VideoService {
         session.disconnect();
     }
 
-    public void quit() {
+    public void stop() {
         write("q");
     }
 
@@ -75,14 +72,22 @@ public class VideoService {
         write("p");
     }
 
-    public void run(String command) { write(command);  }
-
     public String play(String video) {
         String command = videoPlayer + " " + video;
         LOG.info("command: " + command);
         writeln(command);
         return "playing " + video;
     }
+
+    public void forward() { write("e");}
+
+    public void rewind() { write("w");}
+
+    public void fastForward() { write("t");}
+
+    public void fastRewind() { write("r");}
+
+    public void run(String command) { write(command);  }
 
     private void write(String command) {
         if(outputStream == null) LOG.error("outputStream null");
@@ -107,7 +112,7 @@ public class VideoService {
                 while(in.available()>0){
                     int i=in.read(tmp, 0, 1024);
                     if(i<0)break;
-                    System.out.print(new String(tmp, 0, i));
+                    LOG.debug(new String(tmp, 0, i));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -115,7 +120,7 @@ public class VideoService {
             if(channel.isClosed()){
                 try {
                     if(in.available()>0) continue;
-                    System.out.println("exit-status: "+channel.getExitStatus());
+                    LOG.debug("exit-status: " + channel.getExitStatus());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
