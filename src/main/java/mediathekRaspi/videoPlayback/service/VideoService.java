@@ -6,11 +6,16 @@ import com.jcraft.jsch.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+@Service
 public class VideoService {
 
     private OutputStream outputStream;
@@ -29,15 +34,15 @@ public class VideoService {
 
     public VideoService() {}
 
-    public int start() {
+    public int connect() {
         LOG.info("user: " + userName + " tries to connect via ssh");
         LOG.debug("pw: " + pw);
 
         try {
             JSch jSch = new JSch();
-            String knownHostPublicKey = "localhost ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCTCPlgreQqpExO6Y7swmGsu40iNRPTkYMPqYU32NZfpeSWCbxumGqcpgBndxAEYp3Jj0HOiPGxqoGp39QqzPeBF+QO1eOf3KctzmbvevjD/asF5aEw5DRYruAnblt0/U1t3ywR1FCjsF2+pbgT08Coy74uplW5K9p3FEl/+2GQbMYO+PaGVVrge9d9n6+vGRT7wWTpGWuYIshc4cKCzCk8H3MC6kD2BiGim+m8Tc5HfTBDsouThxoLiSLUV3S/xkh+VtExjqZQuYOqjONnw82WjxGc6iL8LO7AG33Er5pVjOj6i6fqsgK2Ao3JBiHIFdYntfS43MIbZCgX5/75k0f";
-          //  jSch.setKnownHosts(new ByteArrayInputStream(knownHostPublicKey.getBytes()));
             session = jSch.getSession(userName, "localhost", 22);
+            //fixme only allow known hostKeys
+            //  jSch.setKnownHosts(new ByteArrayInputStream(knownHostPublicKey.getBytes()));
             session.setConfig("StrictHostKeyChecking", "no");
             session.setPassword(pw);
             session.connect(120000);
@@ -46,10 +51,6 @@ public class VideoService {
             outputStream = channel.getOutputStream();
             channel.connect();
             if(outputStream == null) LOG.error("outputStream null");
-            /*while(true) {
-                if (channel.isClosed()) break;
-                try{Thread.sleep(1000);}catch (Exception e) {}
-            }*/
             printOuput(inputStream);
             return 0;
         } catch (Exception e) {
@@ -57,6 +58,46 @@ public class VideoService {
             e.printStackTrace();
             return -1;
         }
+    }
+
+    public void disconnect() {
+        write("exit");
+        try{Thread.sleep(1000);}catch(Exception ee){}
+        channel.disconnect();
+        session.disconnect();
+    }
+
+    public void quit() {
+        write("q");
+    }
+
+    public void pause() {
+        write("p");
+    }
+
+    public void run(String command) { write(command);  }
+
+    public String play(String video) {
+        String command = videoPlayer + " " + video;
+        LOG.info("command: " + command);
+        writeln(command);
+        return "playing " + video;
+    }
+
+    private void write(String command) {
+        if(outputStream == null) LOG.error("outputStream null");
+        if(command == null) LOG.error("command null");
+        LOG.info("run " + command);
+        try {
+            outputStream.write((command).getBytes());
+            outputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeln(String command) {
+        write(command + "\n");
     }
 
     private void printOuput(InputStream in) {
@@ -83,34 +124,4 @@ public class VideoService {
             try{Thread.sleep(1000);}catch(Exception ee){}
         }
     }
-
-    public void write(String command) {
-        if(outputStream == null) LOG.error("outputStream null");
-        if(command == null) LOG.error("command null");
-        try {
-            outputStream.write((command).getBytes());
-            outputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void writeln(String command) {
-        write(command + "\n");
-    }
-
-    public void exit() {
-        write("exit");
-        try{Thread.sleep(1000);}catch(Exception ee){}
-        channel.disconnect();
-        session.disconnect();
-    }
-
-    public String play(String video) {
-        String command = videoPlayer + " " + video;
-        LOG.info("command: " + command);
-        writeln(command);
-        return "playing " + video;
-    }
-
 }

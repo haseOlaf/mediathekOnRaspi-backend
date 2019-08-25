@@ -19,40 +19,28 @@ public class VideoResource {
 
     @RequestMapping("start")
     public String start() {
-        videoService.start();
+        videoService.connect();
         return "start";
     }
 
-    @RequestMapping("ls")
-    public void ls() {
-        videoService.writeln("ls");
-    }
-
-    @RequestMapping("less")
-    public void less() {
-        videoService.writeln("less subs.srt");
-    }
-
-
     @RequestMapping("quit")
     public void quit() {
-        videoService.write("q");
+        videoService.quit();
     }
 
     @RequestMapping("pause")
     public void pause() {
-        videoService.write("p");
+        videoService.pause();
     }
 
     @RequestMapping("exit")
     public void exit() {
-        videoService.exit();
+        videoService.disconnect();
     }
 
     @RequestMapping(value = "run", method = RequestMethod.GET)
     public void run(@RequestParam("command") String command) {
-        LOG.info("command: " + command);
-        videoService.write(command);
+        videoService.run(command);
     }
 
     @RequestMapping(value = "play", method = RequestMethod.GET)
