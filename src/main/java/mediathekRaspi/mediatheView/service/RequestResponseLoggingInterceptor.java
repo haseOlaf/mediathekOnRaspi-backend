@@ -1,7 +1,5 @@
 package mediathekRaspi.mediatheView.service;
 
-import com.sun.imageio.plugins.common.InputStreamAdapter;
-import jdk.internal.jline.internal.InputStreamReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpRequest;
@@ -10,10 +8,7 @@ import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.util.StreamUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 
 public class RequestResponseLoggingInterceptor implements ClientHttpRequestInterceptor {
