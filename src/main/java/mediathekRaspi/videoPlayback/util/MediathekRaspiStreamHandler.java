@@ -27,7 +27,7 @@ public class MediathekRaspiStreamHandler {
                     if (i < 0) break;
                     String readString = new String(tmp, 0, i);
                     LOG.debug(readString);
-                    if (!readString.isEmpty() && readString.contains("Thank you")) {
+                    if (!readString.isEmpty() && readString.contains("have a nice day")) {
                         LOG.info("Video ended. Disconnecting from raspi");
                         videoService.disconnect();
                     }

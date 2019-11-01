@@ -91,6 +91,10 @@ public class VideoService {
 
     public String play(String video) {
         connect();
+	try {
+            Thread.sleep(1000);
+        } catch (Exception ee) {
+        }
         String command = videoPlayer + " " + video;
         LOG.info("command: " + command);
         writeln(command);

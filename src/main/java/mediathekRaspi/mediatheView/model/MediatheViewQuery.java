@@ -20,7 +20,7 @@ public class MediatheViewQuery implements Serializable {
         this.sortBy = "timestamp";
         this.sortOrder = "desc";
         this.future = false;
-        this.size = 50;
+        this.size = 20;
         this.offset = pageNumber * this.size;
     }
 
