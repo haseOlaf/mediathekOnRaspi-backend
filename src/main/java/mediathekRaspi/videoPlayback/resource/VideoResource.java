@@ -55,7 +55,9 @@ public class VideoResource {
 
     @GetMapping(value = "play")
     public void play(@RequestParam("video") String video) {
-        if (video == null || video == "") video = "https://download.media.tagesschau.de/video/2019/0730/TV-20190730-2022-5001.h264.mp4";
+        if (video == null || video == "") {
+            video = "https://download.media.tagesschau.de/video/2019/0730/TV-20190730-2022-5001.h264.mp4";
+        }
         videoService.play(video);
     }
 

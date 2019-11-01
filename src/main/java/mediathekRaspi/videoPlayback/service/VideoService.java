@@ -2,9 +2,14 @@
 
 package mediathekRaspi.videoPlayback.service;
 
-import com.jcraft.jsch.*;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import mediathekRaspi.videoPlayback.exception.NotConnectedException;
+import mediathekRaspi.videoPlayback.util.MediathekRaspiStreamHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +34,15 @@ public class VideoService {
     @Value("${video.player}")
     private String videoPlayer;
 
-    public VideoService() {}
+    @Autowired
+    MediathekRaspiStreamHandler streamHandler;
+
+    public VideoService() {
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
 
     public int connect() {
         LOG.info("user: " + userName + " tries to connect via ssh");
@@ -47,25 +60,29 @@ public class VideoService {
             InputStream inputStream = channel.getInputStream();
             outputStream = channel.getOutputStream();
             channel.connect();
-            if(outputStream == null) LOG.error("outputStream null");
-            printOuput(inputStream);
+            if (outputStream == null) LOG.error("outputStream null");
+            listenToInputStream(inputStream);
             return 0;
         } catch (Exception e) {
-            LOG.error(e.getMessage());
-            e.printStackTrace();
-            return -1;
+            LOG.error("Konnte nicht auf den raspi verbinden.");
+            throw new NotConnectedException("Konnte nicht auf den raspi verbinden.");
         }
     }
 
     public void disconnect() {
         write("exit");
-        try{Thread.sleep(1000);}catch(Exception ee){}
+        try {
+            Thread.sleep(1000);
+        } catch (Exception ee) {
+        }
         channel.disconnect();
         session.disconnect();
     }
 
     public void stop() {
+
         write("q");
+        disconnect();
     }
 
     public void pause() {
@@ -73,25 +90,36 @@ public class VideoService {
     }
 
     public String play(String video) {
+        connect();
         String command = videoPlayer + " " + video;
         LOG.info("command: " + command);
         writeln(command);
         return "playing " + video;
     }
 
-    public void forward() { write("e");}
+    public void forward() {
+        write("e");
+    }
 
-    public void rewind() { write("w");}
+    public void rewind() {
+        write("w");
+    }
 
-    public void fastForward() { write("t");}
+    public void fastForward() {
+        write("t");
+    }
 
-    public void fastRewind() { write("r");}
+    public void fastRewind() {
+        write("r");
+    }
 
-    public void run(String command) { write(command);  }
+    public void run(String command) {
+        write(command);
+    }
 
     private void write(String command) {
-        if(outputStream == null) LOG.error("outputStream null");
-        if(command == null) LOG.error("command null");
+        if (outputStream == null) LOG.error("outputStream null");
+        if (command == null) LOG.error("command null");
         LOG.info("run " + command);
         try {
             outputStream.write((command).getBytes());
@@ -105,28 +133,7 @@ public class VideoService {
         write(command + "\n");
     }
 
-    private void printOuput(InputStream in) {
-        byte[] tmp=new byte[1024];
-        while(true){
-            try {
-                while(in.available()>0){
-                    int i=in.read(tmp, 0, 1024);
-                    if(i<0)break;
-                    LOG.debug(new String(tmp, 0, i));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if(channel.isClosed()){
-                try {
-                    if(in.available()>0) continue;
-                    LOG.debug("exit-status: " + channel.getExitStatus());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                break;
-            }
-            try{Thread.sleep(1000);}catch(Exception ee){}
-        }
+    private void listenToInputStream(InputStream in) {
+        streamHandler.listenToInputStream(in, this);
     }
 }
