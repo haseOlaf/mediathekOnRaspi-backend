@@ -21,6 +21,7 @@
 /code
 MANIFEST.MF
 _site/
+/out
 activemq-data
 bin
 build

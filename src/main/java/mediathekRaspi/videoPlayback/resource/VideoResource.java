@@ -15,12 +15,6 @@ public class VideoResource {
     @Autowired
     VideoService videoService;
 
-    @GetMapping("connect")
-    public String connect() {
-        videoService.connect();
-        return "start";
-    }
-
     @GetMapping("stop")
     public void stop() {
         videoService.stop();
@@ -42,11 +36,6 @@ public class VideoResource {
 
     @GetMapping("fastrewind")
     public void fastRewind() { videoService.fastRewind(); }
-
-    @GetMapping("disconnect")
-    public void disconnect() {
-        videoService.disconnect();
-    }
 
     @GetMapping(value = "run")
     public void run(@RequestParam("command") String command) {

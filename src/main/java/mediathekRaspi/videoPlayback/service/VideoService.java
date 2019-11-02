@@ -6,7 +6,7 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import mediathekRaspi.videoPlayback.exception.NotConnectedException;
-import mediathekRaspi.videoPlayback.util.MediathekRaspiStreamHandler;
+import mediathekRaspi.videoPlayback.util.StreamCrawler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 @Service
@@ -35,7 +34,7 @@ public class VideoService {
     private String videoPlayer;
 
     @Autowired
-    MediathekRaspiStreamHandler streamHandler;
+    StreamCrawler streamCrawler;
 
     public VideoService() {
     }
@@ -57,11 +56,10 @@ public class VideoService {
             session.setPassword(pw);
             session.connect(120000);
             channel = session.openChannel("shell");
-            InputStream inputStream = channel.getInputStream();
             outputStream = channel.getOutputStream();
             channel.connect();
             if (outputStream == null) LOG.error("outputStream null");
-            listenToInputStream(inputStream);
+            streamCrawler.crawl(channel.getInputStream(), this::onNextFromStream, () -> channel.isClosed(), () -> "exit-status: " + channel.getExitStatus());
             return 0;
         } catch (Exception e) {
             LOG.error("Konnte nicht auf den raspi verbinden.");
@@ -137,7 +135,12 @@ public class VideoService {
         write(command + "\n");
     }
 
-    private void listenToInputStream(InputStream in) {
-        streamHandler.listenToInputStream(in, this);
+    private void onNextFromStream(String readString) {
+        LOG.debug(readString);
+        if (!readString.isEmpty() && readString.contains("have a nice day")) {
+            LOG.info("Video ended. Disconnecting from raspi");
+            disconnect();
+        }
     }
+
 }

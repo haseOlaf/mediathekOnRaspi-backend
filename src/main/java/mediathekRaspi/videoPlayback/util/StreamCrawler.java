@@ -1,23 +1,23 @@
 package mediathekRaspi.videoPlayback.util;
 
-import mediathekRaspi.videoPlayback.service.VideoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-
-import com.jcraft.jsch.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-@Component
-public class MediathekRaspiStreamHandler {
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-    private static Logger LOG = LoggerFactory.getLogger(MediathekRaspiStreamHandler.class);
+@Component
+public class StreamCrawler {
+
+    private static Logger LOG = LoggerFactory.getLogger(StreamCrawler.class);
 
     @Async
-    public void listenToInputStream(InputStream in, VideoService videoService) {
+    public void crawl(InputStream in, Consumer<String> onNext, BooleanSupplier doStop, Supplier<String> logOnExit) {
         byte[] tmp = new byte[1024];
 
         while (true) {
@@ -26,19 +26,15 @@ public class MediathekRaspiStreamHandler {
                     int i = in.read(tmp, 0, 1024);
                     if (i < 0) break;
                     String readString = new String(tmp, 0, i);
-                    LOG.debug(readString);
-                    if (!readString.isEmpty() && readString.contains("have a nice day")) {
-                        LOG.info("Video ended. Disconnecting from raspi");
-                        videoService.disconnect();
-                    }
+                    onNext.accept(readString);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            if (videoService.getChannel().isClosed()) {
+            if (doStop.getAsBoolean()) {
                 try {
                     if (in.available() > 0) continue;
-                    LOG.debug("exit-status: " + videoService.getChannel().getExitStatus());
+                    LOG.info(logOnExit.get());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -51,4 +47,5 @@ public class MediathekRaspiStreamHandler {
             }
         }
     }
+
 }
