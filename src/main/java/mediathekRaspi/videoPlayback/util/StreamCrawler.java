@@ -23,7 +23,7 @@ public class StreamCrawler {
         while (true) {
             try {
                 while (in.available() > 0) {
-                    int i = in.read(tmp, 0, 1024);
+                    int i = in.read(tmp, 0, 512);
                     if (i < 0) break;
                     String readString = new String(tmp, 0, i);
                     onNext.accept(readString);
@@ -33,8 +33,11 @@ public class StreamCrawler {
             }
             if (doStop.getAsBoolean()) {
                 try {
-                    if (in.available() > 0) continue;
+                    if (in.available() > 0) {
+                        continue;
+                    }
                     LOG.info(logOnExit.get());
+                    in.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -47,5 +50,4 @@ public class StreamCrawler {
             }
         }
     }
-
 }

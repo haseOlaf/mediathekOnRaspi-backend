@@ -2,26 +2,25 @@
 
 package mediathekRaspi.videoPlayback.service;
 
-import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import mediathekRaspi.videoPlayback.exception.NotConnectedException;
 import mediathekRaspi.videoPlayback.util.StreamCrawler;
+import mediathekRaspi.videoPlayback.model.ShellConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class VideoService {
 
-    private OutputStream outputStream;
     private Session session;
-    private Channel channel;
+    private ShellConnection mainConnection;
     Logger LOG = LoggerFactory.getLogger(VideoService.class);
 
     @Value("${ssh.user}")
@@ -39,31 +38,29 @@ public class VideoService {
     public VideoService() {
     }
 
-    public Channel getChannel() {
-        return channel;
-    }
-
-    public int connect() {
+    private Session getSession() {
         LOG.info("user: " + userName + " tries to connect via ssh");
         LOG.debug("pw: " + pw);
 
         try {
             JSch jSch = new JSch();
             session = jSch.getSession(userName, "localhost", 22);
-            //fixme only allow known hostKeys
-            //  jSch.setKnownHosts(new ByteArrayInputStream(knownHostPublicKey.getBytes()));
+            // fixme only allow known hostKeys
+            // jSch.setKnownHosts(new ByteArrayInputStream(knownHostPublicKey.getBytes()));
             session.setConfig("StrictHostKeyChecking", "no");
             session.setPassword(pw);
             session.connect(120000);
-            channel = session.openChannel("shell");
-            outputStream = channel.getOutputStream();
-            channel.connect();
-            if (outputStream == null) LOG.error("outputStream null");
-            streamCrawler.crawl(channel.getInputStream(), this::onNextFromStream, () -> channel.isClosed(), () -> "exit-status: " + channel.getExitStatus());
-            return 0;
+            return session;
         } catch (Exception e) {
             LOG.error("Konnte nicht auf den raspi verbinden.");
             throw new NotConnectedException("Konnte nicht auf den raspi verbinden.");
+        }
+    }
+
+    private void closeSession() {
+        if (session.isConnected()) {
+            LOG.info("closing session");
+            session.disconnect();
         }
     }
 
@@ -73,49 +70,58 @@ public class VideoService {
             Thread.sleep(1000);
         } catch (Exception ee) {
         }
-        if (channel.isConnected()) {
-            channel.disconnect();
-        }
-        if (session.isConnected()) {
-            session.disconnect();
-        }
+        mainConnection.disconnect();
+        closeSession();
+        mainConnection.setActivePid(0);
     }
 
     public void stop() {
-
+        LOG.info("Stop video");
         write("q");
         disconnect();
     }
 
     public void pause() {
+        LOG.info("Pause video");
         write("p");
     }
 
     public String play(String video) {
-        connect();
-	try {
+        LOG.info("Play video " + video);
+        mainConnection = new ShellConnection(getSession(), streamCrawler);
+        streamCrawler.crawl(mainConnection.getInputStream(), (in) -> onNextFromStream(in), () -> mainConnection.isClosed(),
+                    () -> onExit());
+        try {
             Thread.sleep(1000);
         } catch (Exception ee) {
         }
-        String command = videoPlayer + " " + video;
-        LOG.info("command: " + command);
+        String command = "sh -c 'echo $$; exec " + videoPlayer + " " + video + "'";
         writeln(command);
         return "playing " + video;
     }
 
+    private String onExit() {
+        closeSession();
+        return "exit-status: " + mainConnection.getExitStatus();
+    }
+
     public void forward() {
+        LOG.info("Forward");
         write("e");
     }
 
     public void rewind() {
+        LOG.info("Rewind");
         write("w");
     }
 
     public void fastForward() {
+        LOG.info("FastForward");
         write("t");
     }
 
     public void fastRewind() {
+        LOG.info("FastRewind");
         write("r");
     }
 
@@ -124,15 +130,7 @@ public class VideoService {
     }
 
     private void write(String command) {
-        if (outputStream == null) LOG.error("outputStream null");
-        if (command == null) LOG.error("command null");
-        LOG.info("run " + command);
-        try {
-            outputStream.write((command).getBytes());
-            outputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mainConnection.write(command);
     }
 
     private void writeln(String command) {
@@ -140,15 +138,19 @@ public class VideoService {
     }
 
     private void onNextFromStream(String readString) {
-        LOG.debug(readString);
         if (readString.isEmpty()) {
             return;
         }
-        if (readString.contains("have a nice day")) {
-            LOG.info("Video ended. Disconnecting from raspi");
-            disconnect();
+
+        if (mainConnection.getActivePid() == 0) {
+            Pattern pidPattern = Pattern.compile("^[0-9]+$", Pattern.MULTILINE);
+            Matcher pidMatcher = pidPattern.matcher(readString);
+            if (pidMatcher.find()) {
+                mainConnection.setActivePid(Integer.parseInt(pidMatcher.group()));
+                mainConnection.closeOnFinishOfActivePid();
+            } 
         }
 
+        LOG.debug(readString);
     }
-
 }
