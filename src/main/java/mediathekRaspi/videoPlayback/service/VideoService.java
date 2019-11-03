@@ -68,13 +68,17 @@ public class VideoService {
     }
 
     public void disconnect() {
-        write("exit");
+        writeln("exit");
         try {
             Thread.sleep(1000);
         } catch (Exception ee) {
         }
-        channel.disconnect();
-        session.disconnect();
+        if (channel.isConnected()) {
+            channel.disconnect();
+        }
+        if (session.isConnected()) {
+            session.disconnect();
+        }
     }
 
     public void stop() {
@@ -137,10 +141,14 @@ public class VideoService {
 
     private void onNextFromStream(String readString) {
         LOG.debug(readString);
-        if (!readString.isEmpty() && readString.contains("have a nice day")) {
+        if (readString.isEmpty()) {
+            return;
+        }
+        if (readString.contains("have a nice day")) {
             LOG.info("Video ended. Disconnecting from raspi");
             disconnect();
         }
+
     }
 
 }
