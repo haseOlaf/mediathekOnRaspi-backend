@@ -30,19 +30,9 @@ public class VideoService {
     public VideoService() {
     }
 
-    private void connectToRaspi() {
-        sshSession.setSession(userName, pw);
-    }
-
-    private void disconnectFromRaspi() {
-        sshSession.disposeSession();
-    }
-
     public void stop() {
         LOG.info("Stop video");
         playerProcess.write("q");
-        playerProcess.disconnect();
-        disconnectFromRaspi();
     }
 
     public void pause() {
@@ -81,5 +71,9 @@ public class VideoService {
 
     public void run(String command) {
         playerProcess.write(command);
+    }
+
+    private void connectToRaspi() {
+        sshSession.setSession(userName, pw);
     }
 }
