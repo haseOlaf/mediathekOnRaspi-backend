@@ -29,36 +29,10 @@ public class ShellConnection {
         return name;
     }
 
-    public Channel getChannel() {
-        return this.channel;
-    }
-
     public SshSession getSession() {
         return this.session;
     }
-
-    public OutputStream getOutputStream() {
-        return outputStream;
-    }
-
-    private void openChannel() {
-        try {
-            channel = session.getSession().openChannel("shell");
-            outputStream = channel.getOutputStream();
-            channel.connect();
-            if (outputStream == null) {
-                LOG.error(name + ": outputStream null");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new NotConnectedException(name+  ": konnte keine shell öffnen");
-        }
-        if (channel == null) {
-            throw new NotConnectedException(name + ": konnte keine shell öffnen");
-        }
-            LOG.debug(getName() + ": opened Connection");
-    }
-
+    
     public InputStream getInputStream() {
         try {
             return channel.getInputStream();
@@ -117,5 +91,24 @@ public class ShellConnection {
     public void dispose() {
         LOG.info(name + ": disposing connection");
         channel = null;
+    }
+
+
+    private void openChannel() {
+        try {
+            channel = session.getSession().openChannel("shell");
+            outputStream = channel.getOutputStream();
+            channel.connect();
+            if (outputStream == null) {
+                LOG.error(name + ": outputStream null");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new NotConnectedException(name+  ": konnte keine shell öffnen");
+        }
+        if (channel == null) {
+            throw new NotConnectedException(name + ": konnte keine shell öffnen");
+        }
+            LOG.debug(getName() + ": opened Connection");
     }
 }

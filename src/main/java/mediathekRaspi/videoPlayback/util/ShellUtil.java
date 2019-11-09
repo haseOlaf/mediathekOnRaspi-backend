@@ -21,7 +21,7 @@ public class ShellUtil {
        LOG.debug("observeConnection startet");
        
         try {
-            Thread.sleep(5);
+            Thread.sleep(5000);
         }
         catch(Exception e) {
         }

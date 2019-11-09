@@ -29,11 +29,7 @@ public class InteractiveShellProcess extends ShellConnection {
         LOG.debug(getName() + ": constructor finished");
     }
 
-    public int getActivePid() {
-        return activePid;
-    }
-
-    public void setActivePid(int pid) {
+    private void setActivePid(int pid) {
         this.activePid = pid;
         LOG.info(getName() + ": started process with pid " + activePid);
     }
@@ -51,7 +47,7 @@ public class InteractiveShellProcess extends ShellConnection {
 
         LOG.debug(getName() + ": " + readString);
 
-        if (getActivePid() == 0) {
+        if (activePid == 0) {
             Pattern pidPattern = Pattern.compile("^[0-9]+$", Pattern.MULTILINE);
             Matcher pidMatcher = pidPattern.matcher(readString);
             if (pidMatcher.find()) {
@@ -63,14 +59,14 @@ public class InteractiveShellProcess extends ShellConnection {
                         () -> continouslyQueryProcessState(observerConnection),
                         it -> this.closeConnectionIfPidIsInactive(it, observerConnection), observerConnection::isClosed,
                         () -> {
-                            LOG.info(getName() + ": stop observing pid " + getActivePid());
+                            LOG.info(getName() + ": stop observing pid " + activePid);
                             observerConnection.dispose();
                         });
             }
         }
     }
 
-    public void continouslyQueryProcessState(ShellConnection observerConnection) {
+    private void continouslyQueryProcessState(ShellConnection observerConnection) {
         try {
             Thread.sleep(5000);
         } catch (Exception e) {
@@ -90,7 +86,7 @@ public class InteractiveShellProcess extends ShellConnection {
         }
     }
 
-    public void closeConnectionIfPidIsInactive(String readString, ShellConnection observerConnection) {
+    private void closeConnectionIfPidIsInactive(String readString, ShellConnection observerConnection) {
         LOG.debug("observerConnection: " + readString);
         Pattern pattern = Pattern.compile("^" + activePid + "notRunning$", Pattern.MULTILINE);
         Matcher matcher = pattern.matcher(readString);
