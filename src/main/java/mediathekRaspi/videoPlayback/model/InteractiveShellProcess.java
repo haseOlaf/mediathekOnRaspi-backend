@@ -34,6 +34,12 @@ public class InteractiveShellProcess extends ShellConnection {
         LOG.info(getName() + ": started process with pid " + activePid);
     }
 
+    @Override
+    public void disconnect() {
+        super.disconnect();
+        activePid = 0;
+    }
+
     private void onExit() {
         LOG.info(getName() + ": exit-status: " + getExitStatus());
         dispose();
@@ -100,5 +106,9 @@ public class InteractiveShellProcess extends ShellConnection {
             disconnect();
         }
     }
+
+	public boolean isProcessRunning() {
+		return activePid != 0;
+	}
 
 }
