@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 @Component
 public class StreamCrawler {
@@ -17,7 +16,7 @@ public class StreamCrawler {
     private static Logger LOG = LoggerFactory.getLogger(StreamCrawler.class);
 
     @Async
-    public void crawl(InputStream in, Consumer<String> onNext, BooleanSupplier doStop, Supplier<String> logOnExit) {
+    public void crawl(InputStream in, Consumer<String> onNext, BooleanSupplier doStop, Runnable onExit) {
         byte[] tmp = new byte[1024];
 
         while (true) {
@@ -36,7 +35,7 @@ public class StreamCrawler {
                     if (in.available() > 0) {
                         continue;
                     }
-                    LOG.info(logOnExit.get());
+                    onExit.run();
                     in.close();
                 } catch (IOException e) {
                     e.printStackTrace();

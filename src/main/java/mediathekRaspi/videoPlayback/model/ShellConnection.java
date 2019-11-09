@@ -13,24 +13,23 @@ import com.jcraft.jsch.Session;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Async;
 
+import mediathekRaspi.util.BeanService;
 import mediathekRaspi.videoPlayback.exception.NotConnectedException;
 import mediathekRaspi.videoPlayback.util.StreamCrawler;
 
 public class ShellConnection {
     private OutputStream outputStream;
     private Session session;
+    private StreamCrawler streamCrawler = BeanService.getBean(StreamCrawler.class);
     private int activePid;
-    @NotNull
     private Channel channel;
     private Logger LOG = LoggerFactory.getLogger(ShellConnection.class);
 
-    private StreamCrawler streamCrawler;
-
-    public ShellConnection(Session session, StreamCrawler streamCrawler) {
+    public ShellConnection(Session session) {
         this.session = session;
-        this.streamCrawler = streamCrawler;
         openChannel();
     }
 
@@ -56,6 +55,7 @@ public class ShellConnection {
                 LOG.error("outputStream null");
             }
         } catch (Exception e) {
+            e.printStackTrace();
             throw new NotConnectedException("konnte keine shell öffnen");
         }
         if (channel == null) {
@@ -93,16 +93,30 @@ public class ShellConnection {
         }
     }
 
+    public void writeln(String command) {
+        write(command + "\n");
+    }
+
     public void disconnect() {
         if (channel.isConnected()) {
+            writeln("exit");
+            try {
+                Thread.sleep(1000);
+            } catch (Exception ee) {
+            }
             LOG.info("closing shellConnection");
             channel.disconnect();
         }
         try {
             outputStream.close();
+            Thread.sleep(200);
         } catch (Exception e) {
-            throw new RuntimeException("Error while colsing OutputStream");
+            throw new RuntimeException("Error while closing OutputStream");
         }
+    }
+
+    public void dispose() {
+        channel = null;
     }
 
     @Async
@@ -112,7 +126,7 @@ public class ShellConnection {
             return;
         }
 
-        ShellConnection observerConnection = new ShellConnection(session, streamCrawler);
+        ShellConnection observerConnection = new ShellConnection(session);
 
         try {
             Thread.sleep(5000);
@@ -120,7 +134,7 @@ public class ShellConnection {
         }
 
         streamCrawler.crawl(observerConnection.getInputStream(), it -> observePid(it, observerConnection),
-                observerConnection::isClosed, () -> "stop observing pid " + activePid);
+                observerConnection::isClosed, () -> LOG.info("stop observing pid " + activePid));
 
         while (true) {
             if (observerConnection.isClosed()) {
@@ -141,7 +155,7 @@ public class ShellConnection {
 
     private void observePid(String readString, ShellConnection observerConnection) {
         LOG.debug("oberserver Connection: " + readString);
-        Pattern pattern = Pattern.compile("^" + activePid + "notRunning$", Pattern.MULTILINE); 
+        Pattern pattern = Pattern.compile("^" + activePid + "notRunning$", Pattern.MULTILINE);
         Matcher matcher = pattern.matcher(readString);
         if (matcher.find()) {
             LOG.info(activePid + " not running anymore. Closing connections");

@@ -27,7 +27,8 @@ targetCompatibility = 1.8
 
 dependencies {
     compile("org.springframework.boot:spring-boot-starter-web")
-    testCompile("junit:junit")
+    testCompile('org.junit.jupiter:junit-jupiter:5.4.0')
+    testCompile('org.springframework.boot:spring-boot-starter-test')
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.55'
     }
 

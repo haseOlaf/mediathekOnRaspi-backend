@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
 @Service
 public class VideoService {
 
+    @Autowired
+    StreamCrawler streamCrawler;
+
     private Session session;
     private ShellConnection mainConnection;
     Logger LOG = LoggerFactory.getLogger(VideoService.class);
@@ -31,9 +34,6 @@ public class VideoService {
 
     @Value("${video.player}")
     private String videoPlayer;
-
-    @Autowired
-    StreamCrawler streamCrawler;
 
     public VideoService() {
     }
@@ -62,17 +62,11 @@ public class VideoService {
             LOG.info("closing session");
             session.disconnect();
         }
+        session = null;
     }
 
     public void disconnect() {
-        writeln("exit");
-        try {
-            Thread.sleep(1000);
-        } catch (Exception ee) {
-        }
-        mainConnection.disconnect();
         closeSession();
-        mainConnection.setActivePid(0);
     }
 
     public void stop() {
@@ -88,9 +82,8 @@ public class VideoService {
 
     public String play(String video) {
         LOG.info("Play video " + video);
-        mainConnection = new ShellConnection(getSession(), streamCrawler);
-        streamCrawler.crawl(mainConnection.getInputStream(), (in) -> onNextFromStream(in), () -> mainConnection.isClosed(),
-                    () -> onExit());
+        mainConnection = new ShellConnection(getSession());
+        streamCrawler.crawl(mainConnection.getInputStream(), this::onNextFromStream, mainConnection::isClosed, this::onExit);
         try {
             Thread.sleep(1000);
         } catch (Exception ee) {
@@ -100,9 +93,10 @@ public class VideoService {
         return "playing " + video;
     }
 
-    private String onExit() {
-        closeSession();
-        return "exit-status: " + mainConnection.getExitStatus();
+    private void onExit() {
+        disconnect();
+        LOG.info("exit-status: " + mainConnection.getExitStatus());
+        mainConnection.dispose();
     }
 
     public void forward() {
@@ -134,7 +128,7 @@ public class VideoService {
     }
 
     private void writeln(String command) {
-        write(command + "\n");
+        mainConnection.writeln(command);
     }
 
     private void onNextFromStream(String readString) {
