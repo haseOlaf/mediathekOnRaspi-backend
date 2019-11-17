@@ -14,7 +14,6 @@ import mediathekRaspi.videoPlayback.util.StreamCrawler;
 public class InteractiveShellProcess extends ShellConnection {
 
     private int activePid;
-    private ShellConnection observerConnection;
     private Logger LOG = LoggerFactory.getLogger(InteractiveShellProcess.class);
     private StreamCrawler streamCrawler = BeanService.getBean(StreamCrawler.class);
 
@@ -49,12 +48,16 @@ public class InteractiveShellProcess extends ShellConnection {
         LOG.debug(getName() + ": " + readString);
 
         if (isProcessRunning()) {
-            return;
+            if (endOfProcessDetected(readString)) {
+                disconnect();
+            } else {
+                queryProcessState();
+            }
         }
 
         detectStartOfProcess(readString);
         if (isProcessRunning()) {
-            getSession().observeProcess(this, this::waitForProcessEnd);
+            queryProcessState();
         }
     }
 
@@ -73,59 +76,14 @@ public class InteractiveShellProcess extends ShellConnection {
         }
     }
 
-    private void waitForProcessEnd(ShellConnection connection) {
-        observerConnection = connection;
-        LOG.debug("observeConnection startet");
-
-        Sleeper.sleep(5000);
-
-        streamCrawler.crawl(observerConnection.getInputStream(), this::onNextObservation, observerConnection::isClosed,
-                this::onObservationFinished);
-
-        Sleeper.sleep(5000);
-
-        while (true) {
-            if (observerConnection.isClosed()) {
-                break;
-            }
-            queryProcessState();
-            Sleeper.sleep(5000);
-        }
-    }
-
     private void queryProcessState() {
-        observerConnection.writeln("ps -o pid= -p " + activePid + ">/dev/null && echo \"" + activePid
-                + "running\" || echo \"" + activePid + "notRunning\"");
+        writeln("ps -o pid= -p " + activePid + ">/dev/null && echo \"" + activePid + "running\" || echo \"" + activePid
+                + "notRunning\"");
     }
 
-    private void onNextObservation(String readString) {
-        if (StringUtil.isEmpty(readString)) {
-            return;
-        }
-        LOG.debug("observerConnection: " + readString);
-        if (obervedProcessStopped(readString)) {
-            disconnectAllConnections();
-        }
-    }
-
-    private boolean obervedProcessStopped(String readString) {
+    private boolean endOfProcessDetected(String readString) {
         Pattern pattern = Pattern.compile("^" + activePid + "notRunning$", Pattern.MULTILINE);
         Matcher matcher = pattern.matcher(readString);
         return matcher.find();
-    }
-
-    private void disconnectAllConnections() {
-        LOG.info("oberserConnection: " + activePid + " not running anymore. Closing connections");
-        observerConnection.disconnect();
-        try {
-            Thread.sleep(500);
-        } catch (Exception e) {
-        }
-        disconnect();
-    }
-
-    private void onObservationFinished() {
-        LOG.info(getName() + ": stop observing pid " + activePid);
-        observerConnection.dispose();
     }
 }
