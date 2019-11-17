@@ -55,9 +55,8 @@ public class VideoService {
         }
         LOG.info("Play video " + video);
         connectToRaspi();
-        playerProcess = new InteractiveShellProcess("interactiveShellProcess");
-        String command = "sh -c 'echo $$; exec " + videoPlayer + " " + video + "'";
-        playerProcess.writeln(command);
+        String command = videoPlayer + " " + video;
+        playerProcess = new InteractiveShellProcess("interactiveShellProcess", command);
         return "playing " + video;
     }
 

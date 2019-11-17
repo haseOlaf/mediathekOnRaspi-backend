@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import mediathekRaspi.util.BeanService;
+import mediathekRaspi.util.Sleeper;
 import mediathekRaspi.videoPlayback.exception.NotConnectedException;
 
 public class ShellConnection {
@@ -32,7 +33,7 @@ public class ShellConnection {
     public SshSession getSession() {
         return this.session;
     }
-    
+
     public InputStream getInputStream() {
         try {
             return channel.getInputStream();
@@ -71,28 +72,24 @@ public class ShellConnection {
 
     public void disconnect() {
         LOG.debug(getName() + ": disconnecting");
-        if (channel.isConnected()) {
-            writeln("exit");
-            try {
-                Thread.sleep(1000);
-            } catch (Exception ee) {
-            }
+        if (channel != null && channel.isConnected()) {
             LOG.info(name + ": closing shellConnection");
             channel.disconnect();
         }
         try {
-            outputStream.close();
-            Thread.sleep(200);
+            if (outputStream != null) {
+                outputStream.close();
+            }
         } catch (Exception e) {
             throw new RuntimeException(name + ": Error while closing OutputStream");
         }
+        Sleeper.sleep(2000);
     }
 
     public void dispose() {
         LOG.info(name + ": disposing connection");
         channel = null;
     }
-
 
     private void openChannel() {
         try {
@@ -104,11 +101,11 @@ public class ShellConnection {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            throw new NotConnectedException(name+  ": konnte keine shell öffnen");
+            throw new NotConnectedException(name + ": konnte keine shell öffnen");
         }
         if (channel == null) {
             throw new NotConnectedException(name + ": konnte keine shell öffnen");
         }
-            LOG.debug(getName() + ": opened Connection");
+        LOG.debug(getName() + ": opened Connection");
     }
 }

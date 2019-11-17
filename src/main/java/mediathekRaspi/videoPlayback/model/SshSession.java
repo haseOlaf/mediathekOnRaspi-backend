@@ -1,10 +1,16 @@
 package mediathekRaspi.videoPlayback.model;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
+
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import mediathekRaspi.videoPlayback.exception.NotConnectedException;
@@ -14,6 +20,7 @@ public class SshSession {
 
     private static Session session;
     private Logger LOG = LoggerFactory.getLogger(SshSession.class);
+    private List<ShellConnection> connections = Collections.emptyList();
 
     public Session getSession() {
         return session;
@@ -50,4 +57,9 @@ public class SshSession {
         session = null;
     }
 
+    @Async
+	public void observeProcess(ShellConnection shellConnection, Consumer<ShellConnection> observe) {
+        ShellConnection observerConnection = new ShellConnection("observerShell");
+        observe.accept(observerConnection);
+    }
 }
